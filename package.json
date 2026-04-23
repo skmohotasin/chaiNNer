@@ -156,7 +156,7 @@
     "systeminformation": "^5.23.8",
     "use-context-selector": "^1.4.0",
     "use-debounce": "^8.0.1",
-    "uuid": "^8.3.2",
+    "uuid": "^14.0.0",
     "wcag-contrast": "^3.0.0",
     "web-worker": "^1.2.0",
     "yargs": "^17.5.1"
