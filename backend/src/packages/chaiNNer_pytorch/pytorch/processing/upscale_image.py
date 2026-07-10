@@ -63,11 +63,20 @@ def upscale(
                 model_bytes = sum(p.numel() * 4 for p in model.model.parameters())
                 MODEL_BYTES_CACHE[model] = model_bytes
 
-            if "cuda" in device.type:
+            if "cuda" in device.type or device.type == "xpu":
                 if options.use_fp16:
                     model_bytes = model_bytes // 2
-                mem_info: tuple[int, int] = torch.cuda.mem_get_info(device)  # type: ignore
-                _free, total = mem_info
+                if "cuda" in device.type:
+                    mem_info: tuple[int, int] = torch.cuda.mem_get_info(device)  # type: ignore
+                    _free, total = mem_info
+                else:
+                    # Some Intel Arc devices (e.g. B580) don't support mem_get_info yet
+                    try:
+                        mem_info = torch.xpu.mem_get_info(device)  # type: ignore
+                        _free, total = mem_info
+                    except Exception:
+                        props = torch.xpu.get_device_properties(device)
+                        total = int(props.total_memory)
                 # only use 75% of the total memory
                 total = int(total * 0.75)
                 if options.budget_limit > 0:

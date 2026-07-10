@@ -123,15 +123,18 @@ def filter_necessary_to_install(dependencies: Iterable[DependencyInfo]):
     """
     Filters out dependencies that are already installed and have the same or higher version.
     """
+    # pip list returns normalized (usually lowercase) names; deps may use canonical casing
+    installed_by_lower = {name.lower(): version for name, version in installed_packages.items()}
+
     dependencies_to_install: list[DependencyInfo] = []
     for dependency in dependencies:
-        version = installed_packages.get(dependency.package_name, None)
+        version = installed_by_lower.get(dependency.package_name.lower(), None)
         if version:
             installed_version = coerce_semver(version)
             dep_version = coerce_semver(dependency.version)
             if installed_version < dep_version:
                 dependencies_to_install.append(dependency)
-        elif not version:
+        else:
             dependencies_to_install.append(dependency)
     return dependencies_to_install
 

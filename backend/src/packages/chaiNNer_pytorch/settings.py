@@ -9,24 +9,37 @@ from system import is_arm_mac
 
 from . import package
 
+
+def _xpu_is_available() -> bool:
+    try:
+        return hasattr(torch, "xpu") and torch.xpu.is_available()
+    except Exception:
+        return False
+
+
 if not is_arm_mac:
     gpu_list = []
-    for i in range(torch.cuda.device_count()):
-        device_name = torch.cuda.get_device_properties(i).name
-        gpu_list.append(device_name)
+    if torch.cuda.is_available():
+        for i in range(torch.cuda.device_count()):
+            device_name = torch.cuda.get_device_properties(i).name
+            gpu_list.append(device_name)
+    elif _xpu_is_available():
+        for i in range(torch.xpu.device_count()):
+            gpu_list.append(torch.xpu.get_device_name(i))
 
-    package.add_setting(
-        DropdownSetting(
-            label="GPU",
-            key="gpu_index",
-            description=(
-                "Which GPU to use for PyTorch. This is only relevant if you have"
-                " multiple GPUs."
-            ),
-            options=[{"label": x, "value": str(i)} for i, x in enumerate(gpu_list)],
-            default="0",
+    if gpu_list:
+        package.add_setting(
+            DropdownSetting(
+                label="GPU",
+                key="gpu_index",
+                description=(
+                    "Which GPU to use for PyTorch. This is only relevant if you have"
+                    " multiple GPUs."
+                ),
+                options=[{"label": x, "value": str(i)} for i, x in enumerate(gpu_list)],
+                default="0",
+            )
         )
-    )
 
 package.add_setting(
     ToggleSetting(
@@ -43,6 +56,9 @@ package.add_setting(
 should_fp16 = False
 if nvidia.is_available:
     should_fp16 = nvidia.all_support_fp16
+elif _xpu_is_available():
+    # Intel Arc GPUs support FP16 well
+    should_fp16 = True
 else:
     should_fp16 = is_arm_mac
 
@@ -108,6 +124,9 @@ class PyTorchSettings:
         # Check for Nvidia CUDA
         elif torch.cuda.is_available() and torch.cuda.device_count() > 0:
             device = f"cuda:{self.gpu_index}"
+        # Check for Intel XPU (Arc / Battlemage, etc.)
+        elif _xpu_is_available() and torch.xpu.device_count() > 0:
+            device = f"xpu:{self.gpu_index}"
         # Check for Apple MPS
         elif (
             hasattr(torch, "backends")

@@ -148,10 +148,15 @@ def tensor2np(
 
 def safe_cuda_cache_empty():
     """
-    Empties the CUDA cache if CUDA is available. Hopefully without causing any errors.
+    Empties the CUDA/XPU cache if available. Hopefully without causing any errors.
     """
     try:
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+    except Exception:
+        pass
+    try:
+        if hasattr(torch, "xpu") and torch.xpu.is_available():
+            torch.xpu.empty_cache()
     except Exception:
         pass

@@ -23,7 +23,7 @@ package = add_package(
         Dependency(
             display_name="Pillow (PIL)",
             pypi_name="Pillow",
-            version="9.2.0",
+            version="10.4.0",
             size_estimate=3 * MB,
             import_name="PIL",
         ),
