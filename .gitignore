@@ -248,3 +248,7 @@ backend/traces
 
 # Local AI model weights (download separately; do not commit)
 models/
+
+# Local chaiNNer chains + large models (do not commit/push)
+chaiNNer-chains/
+
