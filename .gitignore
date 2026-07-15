@@ -245,3 +245,6 @@ dmypy.json
 
 # traces
 backend/traces
+
+# Local AI model weights (download separately; do not commit)
+models/
