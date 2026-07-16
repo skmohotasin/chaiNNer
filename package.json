@@ -165,6 +165,7 @@
     "appdmg": "^0.6.6"
   },
   "allowScripts": {
-    "electron@25.8.4": true
+    "electron@25.8.4": true,
+    "electron-winstaller@5.3.0": true
   }
 }
