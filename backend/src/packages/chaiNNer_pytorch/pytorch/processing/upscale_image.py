@@ -77,8 +77,10 @@ def upscale(
                     except Exception:
                         props = torch.xpu.get_device_properties(device)
                         total = int(props.total_memory)
-                # only use 75% of the total memory
-                total = int(total * 0.75)
+                # Use a slightly more conservative fraction on XPU because free-VRAM
+                # reporting is incomplete on some Arc drivers (including B580).
+                usable_fraction = 0.70 if device.type == "xpu" else 0.75
+                total = int(total * usable_fraction)
                 if options.budget_limit > 0:
                     total = min(options.budget_limit * 1024**3, total)
                 # Estimate using 80% of the value to be more conservative

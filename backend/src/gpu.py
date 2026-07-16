@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import cached_property
@@ -150,4 +151,41 @@ def _get_nvidia_info() -> NvInfo:
 nvidia = _get_nvidia_info()
 
 
-__all__ = ["MemoryUsage", "NvDevice", "NvInfo", "nvidia"]
+def xpu_is_available() -> bool:
+    """Return True when PyTorch XPU (Intel Arc / Battlemage) is usable."""
+    try:
+        import torch
+
+        return hasattr(torch, "xpu") and torch.xpu.is_available()
+    except Exception:
+        return False
+
+
+def xpu_device_names() -> list[str]:
+    if not xpu_is_available():
+        return []
+    import torch
+
+    return [torch.xpu.get_device_name(i) for i in range(torch.xpu.device_count())]
+
+
+def configure_xpu_runtime() -> None:
+    """Set Intel XPU-friendly environment defaults once at import time."""
+    if not xpu_is_available():
+        return
+    # Persist SYCL/AOT caches across runs to avoid recompile stalls on Arc.
+    os.environ.setdefault("SYCL_CACHE_PERSISTENT", "1")
+    os.environ.setdefault("SYCL_CACHE_DIR", os.path.join(
+        os.path.expanduser("~"), ".cache", "chainner-sycl"
+    ))
+
+
+__all__ = [
+    "MemoryUsage",
+    "NvDevice",
+    "NvInfo",
+    "configure_xpu_runtime",
+    "nvidia",
+    "xpu_device_names",
+    "xpu_is_available",
+]

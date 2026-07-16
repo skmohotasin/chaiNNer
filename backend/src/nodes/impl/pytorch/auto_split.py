@@ -99,10 +99,30 @@ def _into_tensor(
             except Exception:
                 # Some arrays cannot be made writeable, and we need to copy them
                 img = np.copy(img)
-        input_tensor = torch.from_numpy(img).to(device, dtype)
-        return input_tensor
+        input_tensor = torch.from_numpy(img)
+        # non_blocking helps overlap H2D copies on CUDA/XPU
+        return input_tensor.to(
+            device,
+            dtype,
+            non_blocking=device.type in ("cuda", "xpu"),
+        )
     finally:
         img.flags.writeable = writeable
+
+
+def _is_oom_error(error: RuntimeError) -> bool:
+    msg = str(error).lower()
+    return any(
+        token in msg
+        for token in (
+            "allocate",
+            "cuda",
+            "out of memory",
+            "out_of_device_memory",
+            "outofmemory",
+            "ur_result_error_out_of_device_memory",
+        )
+    )
 
 
 @torch.inference_mode()
@@ -150,8 +170,8 @@ def pytorch_auto_split(
 
             return result
         except RuntimeError as e:
-            # Check to see if its actually the CUDA out of memory error
-            if "allocate" in str(e) or "CUDA" in str(e):
+            # Check to see if its actually a GPU out of memory error (CUDA or XPU)
+            if _is_oom_error(e):
                 # Collect garbage (clear VRAM)
                 if input_tensor is not None:
                     try:

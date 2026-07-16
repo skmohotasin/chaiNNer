@@ -14,12 +14,17 @@ from system import is_arm_mac
 from . import package
 
 if not is_arm_mac:
+    gpu_options = [{"label": d.name, "value": str(d.index)} for d in nvidia.devices]
+    if not gpu_options:
+        # DirectML / non-Nvidia: expose a generic GPU slot so device_id is configurable
+        gpu_options = [{"label": "GPU 0", "value": "0"}]
+
     package.add_setting(
         DropdownSetting(
             label="GPU",
             key="gpu_index",
             description="Which GPU to use for ONNX. This is only relevant if you have multiple GPUs.",
-            options=[{"label": d.name, "value": str(d.index)} for d in nvidia.devices],
+            options=gpu_options,
             default="0",
         )
     )
@@ -31,6 +36,9 @@ def get_providers():
     default = providers[0]
     if "CUDAExecutionProvider" in providers:
         default = "CUDAExecutionProvider"
+    elif "DmlExecutionProvider" in providers:
+        # DirectML is the best ONNX path for Intel Arc on Windows
+        default = "DmlExecutionProvider"
     elif "CPUExecutionProvider" in providers:
         default = "CPUExecutionProvider"
 

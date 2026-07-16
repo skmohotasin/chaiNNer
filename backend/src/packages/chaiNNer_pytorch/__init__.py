@@ -5,23 +5,18 @@ import sys
 import torch
 
 from api import GB, KB, MB, Dependency, add_package
-from gpu import nvidia
+from gpu import configure_xpu_runtime, nvidia, xpu_is_available
 from logger import logger
 from system import is_arm_mac
 
 general = "PyTorch uses .pth models to upscale images."
 
-
-def _xpu_is_available() -> bool:
-    try:
-        return hasattr(torch, "xpu") and torch.xpu.is_available()
-    except Exception:
-        return False
+configure_xpu_runtime()
 
 
 def _has_intel_gpu() -> bool:
     """Best-effort Intel discrete/iGPU detection for fresh installs."""
-    if _xpu_is_available():
+    if xpu_is_available():
         return True
     if sys.platform != "win32":
         return False
@@ -92,6 +87,7 @@ def get_pytorch():
             size_torch = 2 * GB
             size_vision = 2 * MB
         elif _has_intel_gpu():
+            # Prefer a recent XPU wheel; B580 needs current Intel GPU runtimes.
             cuda_version = "xpu"
             index_url = "https://download.pytorch.org/whl/xpu"
             size_torch = 2 * GB

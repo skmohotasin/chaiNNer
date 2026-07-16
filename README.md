@@ -96,7 +96,7 @@ You can right-click in the editor viewport to show an inline nodes list to selec
 
 **Apple Silicon (M1/M2/M3):** PyTorch MPS acceleration is supported.
 
-**Intel GPUs:** PyTorch XPU acceleration is supported for Intel Arc (including Battlemage B-series). NCNN (Vulkan) is also supported.
+**Intel GPUs:** PyTorch XPU acceleration is supported for Intel Arc (including Battlemage B-series such as B580). FP16 is enabled by default. ONNX can use DirectML on Windows. NCNN (Vulkan) is also supported.
 
 **CPU:** All frameworks support CPU-only mode as a fallback.
 

@@ -11,10 +11,14 @@ if is_arm_mac:
     inst_hint = general
 else:
     package_description = (
-        f"{general} {conversion} It is fastest when CUDA is supported. If TensorRT is"
-        " installed on the system, it can also be configured to use that."
+        f"{general} {conversion} It is fastest with CUDA (Nvidia) or DirectML"
+        " (Intel Arc / AMD on Windows). If TensorRT is installed on the system, it can"
+        " also be configured to use that."
     )
-    inst_hint = f"{general} It does not support AMD GPUs, in linux."
+    inst_hint = (
+        f"{general} On Windows without Nvidia, DirectML is used (works with Intel Arc)."
+        " It does not support AMD GPUs on Linux."
+    )
 
 
 def get_onnx_runtime():
