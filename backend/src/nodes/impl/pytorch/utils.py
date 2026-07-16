@@ -146,6 +146,32 @@ def tensor2np(
     return img_np.astype(imtype)
 
 
+def move_model_to_device(
+    model: torch.nn.Module,
+    device: torch.device,
+    dtype: torch.dtype | None = None,
+) -> torch.nn.Module:
+    """
+    Move a model to device/dtype, including plain Tensor attributes that
+    ``nn.Module.to`` does not move (needed for MAT on XPU).
+    """
+    model = model.to(device) if dtype is None else model.to(device, dtype)
+
+    for module in model.modules():
+        for name, value in list(module.__dict__.items()):
+            if not isinstance(value, torch.Tensor):
+                continue
+            if isinstance(value, torch.nn.Parameter):
+                continue
+            target_dtype = (
+                dtype if dtype is not None and value.is_floating_point() else value.dtype
+            )
+            if value.device != device or value.dtype != target_dtype:
+                setattr(module, name, value.to(device=device, dtype=target_dtype))
+
+    return model
+
+
 def safe_cuda_cache_empty():
     """
     Empties the CUDA/XPU cache if available. Hopefully without causing any errors.

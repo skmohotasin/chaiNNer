@@ -8,7 +8,12 @@ from spandrel import MaskedImageModelDescriptor
 
 import navi
 from api import NodeContext
-from nodes.impl.pytorch.utils import np2tensor, safe_cuda_cache_empty, tensor2np
+from nodes.impl.pytorch.utils import (
+    move_model_to_device,
+    np2tensor,
+    safe_cuda_cache_empty,
+    tensor2np,
+)
 from nodes.properties.inputs import ImageInput
 from nodes.properties.inputs.pytorch_inputs import InpaintModelInput
 from nodes.properties.outputs import ImageOutput
@@ -29,7 +34,9 @@ def inpaint(
         dtype = torch.float16 if use_fp16 else torch.float32
         device = options.device
 
+        # Spandrel descriptors expose .to; also move MAT's loose Tensor attrs for XPU.
         model = model.to(device, dtype)
+        move_model_to_device(model.model, device, dtype)
 
         img_tensor = np2tensor(img, change_range=True)
         mask_tensor = np2tensor(mask, change_range=True)
