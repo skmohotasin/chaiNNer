@@ -2,8 +2,6 @@ import os
 import subprocess
 import sys
 
-import torch
-
 from api import GB, KB, MB, Dependency, add_package
 from gpu import configure_xpu_runtime, nvidia, xpu_is_available
 from logger import logger
@@ -11,7 +9,11 @@ from system import is_arm_mac
 
 general = "PyTorch uses .pth models to upscale images."
 
-configure_xpu_runtime()
+# Safe before torch is installed (packaged first-run uses integrated Python).
+try:
+    configure_xpu_runtime()
+except Exception:
+    pass
 
 
 def _has_intel_gpu() -> bool:

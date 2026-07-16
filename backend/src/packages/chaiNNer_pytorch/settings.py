@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-import torch
-
 from api import DropdownSetting, NodeContext, NumberSetting, ToggleSetting
 from gpu import configure_xpu_runtime, nvidia, xpu_device_names, xpu_is_available
 from logger import logger
@@ -9,9 +7,16 @@ from system import is_arm_mac
 
 from . import package
 
-configure_xpu_runtime()
+try:
+    import torch
 
-if not is_arm_mac:
+    configure_xpu_runtime()
+    _TORCH_AVAILABLE = True
+except Exception:
+    torch = None  # type: ignore
+    _TORCH_AVAILABLE = False
+
+if not is_arm_mac and _TORCH_AVAILABLE:
     gpu_list = []
     if torch.cuda.is_available():
         for i in range(torch.cuda.device_count()):
@@ -114,7 +119,10 @@ class PyTorchSettings:
             logger.info("Falling back to FP32 mode.")
 
     @property
-    def device(self) -> torch.device:
+    def device(self):
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError("PyTorch is not installed.")
+
         # CPU override
         if self.use_cpu:
             device = "cpu"
