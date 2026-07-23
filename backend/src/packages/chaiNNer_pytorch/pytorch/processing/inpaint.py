@@ -8,6 +8,7 @@ from spandrel import MaskedImageModelDescriptor
 
 import navi
 from api import NodeContext
+from nodes.impl.image_utils import as_target_channels
 from nodes.impl.pytorch.utils import (
     move_model_to_device,
     np2tensor,
@@ -17,6 +18,7 @@ from nodes.impl.pytorch.utils import (
 from nodes.properties.inputs import ImageInput
 from nodes.properties.inputs.pytorch_inputs import InpaintModelInput
 from nodes.properties.outputs import ImageOutput
+from nodes.utils.utils import get_h_w_c
 
 from ...settings import PyTorchSettings, get_settings
 from .. import processing_group
@@ -82,12 +84,13 @@ def inpaint(
     name="Inpaint",
     description=[
         "Inpaint an image with given mask, using a PyTorch inpainting model.",
+        "Accepts RGB or RGBA images (alpha is preserved if present).",
         "Masks must typically be made outside of chaiNNer.",
         "Supported models include LaMa and MAT",
     ],
     icon="PyTorch",
     inputs=[
-        ImageInput(channels=3),
+        ImageInput(channels=[3, 4]),
         ImageInput("Mask", channels=1).with_docs(
             "An inpainting mask is a grayscale image where white represents what to inpaint and black represents what to keep.",
             "This must typically be made outside of chaiNNer.",
@@ -100,8 +103,8 @@ def inpaint(
             image_type=navi.Image(
                 width="Input0.width & Input1.width",
                 height="Input0.height & Input1.height",
+                channels="Input0.channels",
             ),
-            channels=3,
         ).with_never_reason("The given image and mask must have the same resolution.")
     ],
     node_context=True,
@@ -122,4 +125,12 @@ def inpaint_node(
         after="node" if exec_options.force_cache_wipe else "chain",
     )
 
-    return inpaint(img, mask, model, exec_options)
+    channels = get_h_w_c(img)[2]
+    alpha = img[:, :, 3] if channels == 4 else None
+    rgb = as_target_channels(img, 3, narrowing=True)
+
+    result = inpaint(rgb, mask, model, exec_options)
+    if alpha is not None:
+        return np.dstack((result, alpha))
+    return result
+
