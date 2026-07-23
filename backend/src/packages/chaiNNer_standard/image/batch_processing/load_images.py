@@ -66,7 +66,10 @@ def list_glob(directory: Path, globexpr: str, ext_filter: list[str]) -> list[Pat
     ],
     icon="BsImages",
     inputs=[
-        DirectoryInput(),
+        DirectoryInput(must_exist=False).with_docs(
+            "Select the folder that contains the images to process.",
+            hint=True,
+        ),
         BoolInput("Use WCMatch glob expression", default=False),
         if_group(Condition.bool(1, False))(
             BoolInput("Recursive").with_docs("Iterate recursively over subdirectories.")
@@ -98,7 +101,6 @@ def list_glob(directory: Path, globexpr: str, ext_filter: list[str]) -> list[Pat
         TextOutput("Extension").with_docs(
             "The file extension of the loaded image, including the leading dot (e.g. `.png`, `.jpg`).",
             "Connect this to **Save Image → Match Extension** to keep the same output format as the input.",
-            hint=True,
         ),
     ],
     iterator_outputs=IteratorOutputInfo(
@@ -125,6 +127,15 @@ def load_images_node(
         return img, rel_path, basename, index, ext
 
     supported_filetypes = get_available_image_formats()
+
+    if not str(directory).strip() or directory == Path(""):
+        raise ValueError(
+            "Load Images: please select an input Directory (folder) first."
+        )
+    if not directory.exists():
+        raise FileNotFoundError(
+            f"Load Images: directory does not exist: {directory}"
+        )
 
     if not use_glob:
         glob_str = "**/*" if is_recursive else "*"
