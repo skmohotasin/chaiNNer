@@ -32,6 +32,7 @@ from nodes.properties.inputs import (
     ImageInput,
     RelativePathInput,
     SliderInput,
+    TextInput,
 )
 from nodes.utils.utils import get_h_w_c
 
@@ -52,6 +53,22 @@ class ImageFormat(Enum):
     @property
     def extension(self) -> str:
         return self.value
+
+
+def image_format_from_extension(ext: str) -> ImageFormat:
+    """Map a file extension (with or without dot) to ImageFormat."""
+    key = ext.lower().lstrip(".")
+    if key == "jpeg":
+        key = "jpg"
+    if key == "tif":
+        key = "tiff"
+    try:
+        return ImageFormat(key)
+    except ValueError as e:
+        supported = ", ".join(f.value for f in ImageFormat)
+        raise ValueError(
+            f"Unsupported extension '{ext}'. Supported: {supported}"
+        ) from e
 
 
 IMAGE_FORMAT_LABELS: dict[ImageFormat, str] = {
@@ -191,6 +208,14 @@ def DdsMipMapsDropdown() -> DropDownInput:
             "The name of the image file **without** the file extension. If the file already exists, it will be overwritten.",
             "Example: `my-image`",
         ),
+        TextInput("Match Extension")
+        .make_optional()
+        .with_id(1001)
+        .with_docs(
+            "If set (e.g. connected from **Load Images → Extension**), the saved file format matches this extension (`.png`, `.jpg`, `.webp`, …).",
+            "This overrides the **Image Format** dropdown. Format-specific options (JPG quality, etc.) still use their defaults or the values from the dropdown groups.",
+            hint=True,
+        ),
         EnumInput(
             ImageFormat,
             "Image Format",
@@ -318,6 +343,7 @@ def save_image_node(
     base_directory: Path,
     relative_path: str | None,
     filename: str,
+    match_extension: str | None,
     image_format: ImageFormat,
     png_color_depth: PngColorDepth,
     webp_lossless: bool,
@@ -335,6 +361,9 @@ def save_image_node(
     avif_chroma_subsampling: AvifSubsampling,
     skip_existing_files: bool,
 ) -> None:
+    if match_extension:
+        image_format = image_format_from_extension(match_extension)
+
     full_path = get_full_path(base_directory, relative_path, filename, image_format)
 
     if full_path.exists():

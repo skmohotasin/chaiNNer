@@ -96,10 +96,10 @@ package.add_setting(
 if nvidia.is_available or xpu_is_available():
     package.add_setting(
         ToggleSetting(
-            label="Force GPU Cache Wipe (not recommended)",
+            label="Force GPU Cache Wipe (recommended for large batches)",
             key="force_cache_wipe",
-            description="Clears PyTorch's GPU cache after each inference. This is NOT recommended, by us or PyTorch's developers, as it basically interferes with how PyTorch is intended to work and can significantly slow down inference time. Only enable this if you're experiencing issues with VRAM allocation.",
-            default=False,
+            description="Clears the GPU cache after each image. Slightly slower, but strongly recommended when batch-processing hundreds/thousands of images so VRAM does not keep growing. Safe to leave on for Intel Arc.",
+            default=True if xpu_is_available() and not nvidia.is_available else False,
         )
     )
 

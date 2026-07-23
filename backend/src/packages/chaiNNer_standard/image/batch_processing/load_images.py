@@ -16,7 +16,7 @@ from nodes.properties.outputs import (
     NumberOutput,
     TextOutput,
 )
-from nodes.utils.utils import alphanumeric_sort
+from nodes.utils.utils import alphanumeric_sort, split_file_path
 
 from .. import batch_processing_group
 from ..io.load_image import load_image_node
@@ -95,9 +95,14 @@ def list_glob(directory: Path, globexpr: str, ext_filter: list[str]) -> list[Pat
         TextOutput("Subdirectory Path"),
         TextOutput("Name"),
         NumberOutput("Index", output_type="min(uint, max(0, IterOutput0.length - 1))"),
+        TextOutput("Extension").with_docs(
+            "The file extension of the loaded image, including the leading dot (e.g. `.png`, `.jpg`).",
+            "Connect this to **Save Image → Match Extension** to keep the same output format as the input.",
+            hint=True,
+        ),
     ],
     iterator_outputs=IteratorOutputInfo(
-        outputs=[0, 2, 3, 4],
+        outputs=[0, 2, 3, 4, 5],
         length_type="if Input4 { min(uint, Input5) } else { uint }",
     ),
     kind="generator",
@@ -111,12 +116,13 @@ def load_images_node(
     use_limit: bool,
     limit: int,
     fail_fast: bool,
-) -> tuple[Generator[tuple[np.ndarray, str, str, int]], Path]:
+) -> tuple[Generator[tuple[np.ndarray, str, str, int, str]], Path]:
     def load_image(path: Path, index: int):
         img, img_dir, basename = load_image_node(path)
         # Get relative path from root directory passed by Iterator directory input
         rel_path = os.path.relpath(img_dir, directory)
-        return img, rel_path, basename, index
+        ext = split_file_path(path)[2].lower()
+        return img, rel_path, basename, index, ext
 
     supported_filetypes = get_available_image_formats()
 

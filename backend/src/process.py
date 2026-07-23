@@ -47,6 +47,27 @@ from progress_controller import Aborted, ProgressController, ProgressToken
 from util import combine_sets, timed_supplier
 
 
+def release_iteration_memory() -> None:
+    """
+    Free RAM/VRAM held by the last batch image so long Load Images runs
+    (hundreds/thousands of files) do not keep growing memory usage.
+    """
+    gc.collect()
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            try:
+                torch.cuda.ipc_collect()
+            except Exception:
+                pass
+        if hasattr(torch, "xpu") and torch.xpu.is_available():
+            torch.xpu.empty_cache()
+    except Exception:
+        pass
+
+
 def collect_input_information(
     node: NodeData,
     inputs: list[object | Lazy[object]],
@@ -829,6 +850,7 @@ class Executor:
                         run_collector_iterate(collector_node, iterate_inputs, collector)
 
                 self.node_cache.delete_many(all_iterated_nodes)
+                release_iteration_memory()
 
                 await self.progress.suspend()
                 for node in generator_nodes:
@@ -853,6 +875,8 @@ class Executor:
                 if total_stopiters >= num_generators:
                     break
             except Exception as e:
+                self.node_cache.delete_many(all_iterated_nodes)
+                release_iteration_memory()
                 if generator_output and generator_output.generator.fail_fast:
                     raise e
                 else:
